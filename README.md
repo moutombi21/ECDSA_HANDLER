@@ -151,3 +151,4 @@ Ce projet est sous licence MIT. Consultez le fichier [LICENSE](LICENSE) pour plu
 - Bibliothèque `ecdsa` : [PyPI](https://pypi.org/project/ecdsa/)
 - JSON Web Tokens (JWT) : [jwt.io](https://jwt.io/)
 
+# ECDSA_HANDLER
