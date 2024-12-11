@@ -21,7 +21,7 @@
 1. **Cloner le dépôt :**
 
    ```bash
-   git clone https://github.com/votre-utilisateur/ECDSA_HANDLER.git
+   git clone https://github.com/moutombi21/ECDSA_HANDLER.git
    cd ECDSA_HANDLER
    ```
 
@@ -164,7 +164,7 @@ Le projet utilise `logging` pour suivre les activités et signaler les erreurs. 
 
 ## Auteurs
 
-- **Votre Nom** - Développeur Principal
+- **moutombi21** - Développeur Principal
 
 ---
 
