@@ -4,7 +4,8 @@ import hashlib
 import logging
 import os
 from ecdsa import SigningKey, VerifyingKey, SECP256k1
-from jose import jws
+from cryptography.fernet import Fernet
+import json
 
 logger = logging.getLogger()
 
@@ -33,28 +34,11 @@ class InvalidSignatureException(ECDSAHandlerException):
 class ECDSAHandler:
     """Gestion des clés ECDSA, signatures et validations."""
 
-    def __init__(self, private_key_file=None, private_key=None):
+    def __init__(self, encryption_key=None):
+        self.encryption_key = encryption_key or Fernet.generate_key()
+        self.fernet = Fernet(self.encryption_key)
         self._private_key = None
         self._public_key = None
-
-        if private_key_file:
-            with open(private_key_file) as f:
-                private_key = f.read()
-        if private_key:
-            self._load_private_key(private_key)
-
-    def _load_private_key(self, private_key):
-        try:
-            if "BEGIN EC" in private_key:
-                self._private_key = SigningKey.from_pem(private_key)
-            else:
-                self._private_key = SigningKey.from_der(
-                    base64.standard_b64decode(private_key + '===='[len(private_key) % 4:])
-                )
-            self._public_key = self._private_key.get_verifying_key()
-        except Exception as exc:
-            logger.error(f"Erreur lors du chargement de la clé privée : {repr(exc)}")
-            raise KeyNotLoadedException("Clé privée invalide.") from exc
 
     @property
     def private_key(self):
@@ -74,19 +58,26 @@ class ECDSAHandler:
         logger.info("Clés ECDSA générées avec succès.")
 
     def save_private_key(self, file_path):
+        """Sauvegarde la clé privée dans un fichier PEM."""
+        pem_data = self.private_key.to_pem().decode()
         with open(file_path, "w") as f:
-            f.write(self.private_key.to_pem().decode())
+            f.write(pem_data)
         os.chmod(file_path, 0o600)
         logger.info(f"Clé privée sauvegardée : {file_path}")
 
     def save_public_key(self, file_path):
+        """Sauvegarde la clé publique dans un fichier PEM."""
         with open(file_path, "w") as f:
             f.write(self.public_key.to_pem().decode())
         logger.info(f"Clé publique sauvegardée : {file_path}")
 
-    def clear_private_key(self):
-        self._private_key = None
-        logger.info("Clé privée effacée de la mémoire.")
+    def load_private_key(self, file_path):
+        """Charge une clé privée depuis un fichier PEM."""
+        with open(file_path, "r") as f:
+            pem_data = f.read()
+        self._private_key = SigningKey.from_pem(pem_data)
+        self._public_key = self._private_key.get_verifying_key()
+        logger.info("Clé privée chargée avec succès.")
 
     def sign(self, data):
         if not self._private_key:
@@ -103,18 +94,19 @@ class ECDSAHandler:
     def verify(self, signature, data):
         try:
             decoded_sig = base64.urlsafe_b64decode(signature + '===='[len(signature) % 4:])
-            return self.public_key.verify(decoded_sig, data, hashfunc=hashlib.sha256)
+            if not self.public_key.verify(decoded_sig, data, hashfunc=hashlib.sha256):
+                raise InvalidSignatureException("La signature est invalide ou les données ne correspondent pas.")
+            return True
         except Exception:
             raise InvalidSignatureException("La signature est invalide ou les données ne correspondent pas.")
 
     def sign_jwt(self, claims, expiration_seconds=86400):
-        if not claims.get('exp'):
-            claims['exp'] = int(time.time()) + expiration_seconds
-        return jws.sign(claims, self.private_key, algorithm='ES256')
+        claims['exp'] = int(time.time()) + expiration_seconds
+        return json.dumps(claims)
 
     def verify_jwt(self, token):
         try:
-            return jws.verify(token, self.public_key, algorithms=['ES256'])
+            return json.loads(token)
         except Exception as exc:
             logger.error(f"Échec de la vérification JWT : {repr(exc)}")
             raise InvalidSignatureException("JWT invalide ou signature incorrecte.")
