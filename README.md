@@ -2,16 +2,16 @@
 
 ## Description
 
-**ECDSA Handler** est une bibliothèque Python qui permet de gérer les clés ECDSA, les signatures numériques, et les tokens JWT (JSON Web Tokens). Elle fournit une interface simple pour générer, sauvegarder, charger des clés cryptographiques, et effectuer des opérations de signature et de vérification.
+**ECDSA Handler** est une bibliothèque Python qui permet de gérer les clés ECDSA, les signatures numériques et les tokens JWT (JSON Web Tokens). Elle utilise désormais des bibliothèques modernes comme `cryptography` et `PyJWT` pour garantir une sécurité accrue et des performances optimales.
 
 ---
 
 ## Fonctionnalités
 
-- Génération de clés ECDSA (privée et publique) basées sur la courbe `SECP256k1`.
+- Génération de clés ECDSA (privée et publique) basées sur la courbe `SECP256R1`.
 - Signature et vérification de données.
-- Gestion de tokens JWT avec signature ES256.
-- Sauvegarde et chargement des clés au format PEM.
+- Gestion de tokens JWT avec signature ES256 via `PyJWT`.
+- Sauvegarde et chargement des clés au format PEM avec `cryptography`.
 - Gestion des exceptions pour des messages d'erreur clairs.
 
 ---
@@ -21,7 +21,7 @@
 1. **Cloner le dépôt :**
 
    ```bash
-   git clone https://github.com/moutombi21/ECDSA_HANDLER.git
+   git clone https://github.com/votre-utilisateur/ECDSA_HANDLER.git
    cd ECDSA_HANDLER
    ```
 
@@ -48,22 +48,51 @@
 Créez un fichier `main.py` avec le contenu suivant pour commencer à utiliser **ECDSA Handler** :
 
 ```python
-from ecdsa_handler import ECDSAHandler, ECDSAHandlerException
+import jwt
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives import serialization
+
+class ECDSAHandler:
+    def __init__(self):
+        self.private_key = ec.generate_private_key(ec.SECP256R1())
+        self.public_key = self.private_key.public_key()
+
+    def sign_data(self, data):
+        signature = self.private_key.sign(data, ec.ECDSA(hashes.SHA256()))
+        return signature
+
+    def verify_signature(self, signature, data):
+        try:
+            self.public_key.verify(signature, data, ec.ECDSA(hashes.SHA256()))
+            return True
+        except Exception:
+            return False
+
+    def sign_jwt(self, claims):
+        private_pem = self.private_key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption(),
+        )
+        return jwt.encode(claims, private_pem, algorithm="ES256")
+
+    def verify_jwt(self, token):
+        public_pem = self.public_key.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+        return jwt.decode(token, public_pem, algorithms=["ES256"])
 
 if __name__ == "__main__":
-    try:
-        handler = ECDSAHandler()
-        handler.generate_keys()
-        handler.save_private_key("private_key.pem")
-        handler.save_public_key("public_key.pem")
+    handler = ECDSAHandler()
+    data = b"Exemple de données"
+    signature = handler.sign_data(data)
+    print(f"Signature valide : {handler.verify_signature(signature, data)}")
 
-        data = b"Exemple de données"
-        signature = handler.sign(data)
-        print(f"Signature valide : {handler.verify(signature, data)}")
-    except ECDSAHandlerException as e:
-        print(f"Erreur ECDSA : {e}")
-    except Exception as e:
-        print(f"Erreur inattendue : {e}")
+    claims = {"aud": "test-audience", "exp": 1700000000}
+    token = handler.sign_jwt(claims)
+    print(f"Token valide : {handler.verify_jwt(token)}")
 ```
 
 ### Commande pour exécuter :
@@ -78,13 +107,14 @@ python main.py
 
 ```
 ECDSA_HANDLER/
-├── ecdsa_handler.py         # Classe principale pour gérer les clés ECDSA
-├── main.py                  # Point d'entrée principal pour tester la bibliothèque
+├── src/
+│   ├── ecdsa_handler.py         # Classe principale pour gérer les clés ECDSA
+│   ├── api.py                  # API pour utiliser les fonctionnalités via HTTP
 ├── tests/
-│   └── test_ecdsa_handler.py # Tests unitaires
-├── benchmark.py             # Script de performance
-├── requirements.txt         # Liste des dépendances
-├── README.md                # Documentation
+│   ├── test_ecdsa_handler.py   # Tests unitaires
+├── requirements.txt            # Liste des dépendances
+├── setup.py                    # Configuration pour pip et setuptools
+├── README.md                   # Documentation
 ```
 
 ---
@@ -94,13 +124,13 @@ ECDSA_HANDLER/
 1. **Exécuter les tests unitaires :**
 
    ```bash
-   python -m unittest discover tests
+   python -m unittest discover -s tests
    ```
 
-2. **Exécuter le benchmark :**
+2. **Exécuter un audit de sécurité :**
 
    ```bash
-   python benchmark.py
+   pip-audit
    ```
 
 ---
@@ -134,7 +164,7 @@ Le projet utilise `logging` pour suivre les activités et signaler les erreurs. 
 
 ## Auteurs
 
-- **moutombi21** - Développeur Principal
+- **Votre Nom** - Développeur Principal
 
 ---
 
@@ -146,9 +176,7 @@ Ce projet est sous licence MIT. Consultez le fichier [LICENSE](LICENSE) pour plu
 
 ## Ressources
 
-- Documentation SECP256k1 : [SECG SEC2](https://www.secg.org/sec2-v2.pdf)
-- Documentation ECDSA : [Elliptic Curve Digital Signature Algorithm](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm)
-- Bibliothèque `ecdsa` : [PyPI](https://pypi.org/project/ecdsa/)
+- Documentation SECP256R1 : [SECG SEC2](https://www.secg.org/sec2-v2.pdf)
+- Documentation PyJWT : [PyJWT](https://pyjwt.readthedocs.io/)
+- Bibliothèque `cryptography` : [cryptography.io](https://cryptography.io/)
 - JSON Web Tokens (JWT) : [jwt.io](https://jwt.io/)
-
-# ECDSA_HANDLER
