@@ -1,0 +1,32 @@
+# Normalisation des fins de ligne
+# Convertit automatiquement CRLF en LF lors du commit
+* text=auto
+# Forcer les fins de ligne en LF pour les fichiers de code
+*.py eol=lf
+*.sh eol=lf
+*.js eol=lf
+*.html eol=lf
+*.css eol=lf
+# Forcer les fins de ligne en CRLF pour les fichiers batch sous Windows
+*.bat eol=crlf
+# Traiter les fichiers binaires comme tels (pas de conversion de fins de ligne)
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
+*.zip binary
+*.exe binary
+*.dll filter=lfs diff=lfs merge=lfs -text
+# Exclure les fichiers JSON spécifiques à Jupyter
+*.json eol=lf
+# Gérer les fichiers Markdown et texte pour les projets collaboratifs
+*.md eol=lf
+*.txt eol=lf
+# Gérer les fichiers YAML
+*.yaml eol=lf
+*.yml eol=lf
+# Assurer la compatibilité des fichiers README
+README* eol=lf
+* text=auto
+*.lib filter=lfs diff=lfs merge=lfs -text
+*.pyd filter=lfs diff=lfs merge=lfs -text
